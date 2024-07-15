@@ -1,2 +1,2 @@
 # Flag-Football-Playmaker
-Simple 5v5 flag football playmaker
+Download repo and run index.html, all instructions are on the page

@@ -245,4 +245,25 @@ function highlightPlayer(player) {
     draw();
 }
 
+document.getElementById('clear-canvas').addEventListener('click', () => {
+    players = [
+        { x: 125, y: 640, color: '#FF8000', id: 1 },
+        { x: 220, y: 640, color: '#AD1EAD', id: 2 },
+        { x: 300, y: 640, color: '#696161', id: 3 },
+        { x: 450, y: 640, color: '#14C19C', id: 4 },
+        { x: 300, y: 725, color: '#B50000', id: 5 }
+    ];
+    routes = [];
+    currentPlayer = null;
+    draw();
+});
+
+document.getElementById('delete-route').addEventListener('click', () => {
+    if (highlightedPlayer) {
+        routes = routes.filter(route => route.playerId !== highlightedPlayer.id);
+        highlightedPlayer = null;
+        draw();
+    }
+});
+
 draw();

@@ -113,28 +113,41 @@ document.getElementById('toggle-mode').addEventListener('click', () => {
     draw();
 });
 
-document.getElementById('clear-canvas').addEventListener('click', () => {
-    players.forEach(player => {
-        player.x = player.initialX;
-        player.y = player.initialY;
-    });
-    routes = [];
-    highlightedPlayer = null;
-    draw();
-});
-//salvataggio
-// Funzione per ottenere l'indice corrente dal localStorage
-function getCurrentIndex() {
-    const currentIndex = localStorage.getItem('playIndex');
-    return currentIndex ? parseInt(currentIndex, 10) : 1;
-}
-
-// Funzione per aggiornare l'indice nel localStorage
-function updateIndex(index) {
-    localStorage.setItem('playIndex', index.toString());
-}
-
 document.getElementById('save-play').addEventListener('click', () => {
+    // Apri la modale di conferma
+    const modal = document.getElementById('confirmation-modal');
+    modal.style.display = 'block';
+});
+
+document.getElementById('save-black-white').addEventListener('click', () => {
+    savePlay(true); // Salva in bianco e nero
+    closeModal();
+});
+
+document.getElementById('save-color').addEventListener('click', () => {
+    savePlay(false); // Salva a colori
+    closeModal();
+});
+
+document.querySelector('.close-button').addEventListener('click', closeModal);
+
+window.addEventListener('click', (event) => {
+    const modal = document.getElementById('confirmation-modal');
+    if (event.target === modal) {
+        closeModal();
+    }
+});
+
+function closeModal() {
+    const modal = document.getElementById('confirmation-modal');
+    modal.style.display = 'none';
+}
+
+function savePlay(saveInBlackAndWhite) {
+    drawField(saveInBlackAndWhite);
+    drawRoutes(saveInBlackAndWhite);
+    drawPlayers(saveInBlackAndWhite);
+
     const index = getCurrentIndex(); // Ottieni l'indice corrente
     const dataURL = canvas.toDataURL('image/png');
     const link = document.createElement('a');
@@ -143,38 +156,21 @@ document.getElementById('save-play').addEventListener('click', () => {
     link.click();
 
     updateIndex(index + 1); // Incrementa e salva il nuovo indice
-});
 
-
-
-
-
-
-
-document.getElementById('delete-route').addEventListener('click', () => {
-    if (highlightedPlayer) {
-        routes = routes.filter(route => route.playerId !== highlightedPlayer.id);
-        highlightedPlayer = null;
-        draw();
-    }
-});
-
-function highlightPlayer(player) {
-    highlightedPlayer = player;
+    // Ridisegna per la visualizzazione normale
     draw();
 }
 
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawField();
     drawRoutes();
     drawPlayers();
 }
 
-function drawField() {
-    ctx.fillStyle = '#1a1a1a';
+function drawField(saveMode = false) {
+    ctx.fillStyle = saveMode ? '#ffffff' : '#1a1a1a'; // Bianco per il salvataggio, scuro per la visualizzazione normale
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#ffffff';
+    ctx.strokeStyle = saveMode ? '#000000' : '#ffffff'; // Nero per il salvataggio, bianco per la visualizzazione normale
     ctx.lineWidth = 2;
     for (let i = 1; i <= 4; i++) {
         ctx.moveTo(0, (canvas.height / 5) * i);
@@ -183,17 +179,17 @@ function drawField() {
     }
 }
 
-function drawPlayers() {
+function drawPlayers(saveMode = false) {
     players.forEach(player => {
         ctx.beginPath();
         ctx.arc(player.x, player.y, 10, 0, Math.PI * 2, true);
-        ctx.fillStyle = player.color;
+        ctx.fillStyle = saveMode ? '#000000' : player.color; // Nero per il salvataggio, colore originale per la visualizzazione normale
         ctx.fill();
         if (player === highlightedPlayer) {
-            ctx.strokeStyle = '#FFFF00'; // Giallo
+            ctx.strokeStyle = saveMode ? '#000000' : '#FFFF00'; // Nero per il salvataggio, giallo per la visualizzazione normale
             ctx.lineWidth = 4;
         } else {
-            ctx.strokeStyle = '#ffffff';
+            ctx.strokeStyle = saveMode ? '#000000' : '#ffffff'; // Nero per il salvataggio, bianco per la visualizzazione normale
             ctx.lineWidth = 2;
         }
         ctx.stroke();
@@ -201,7 +197,7 @@ function drawPlayers() {
     });
 }
 
-function drawRoutes() {
+function drawRoutes(saveMode = false) {
     routes.forEach(route => {
         const segments = route.segments;
         if (segments.length > 1) {
@@ -210,31 +206,43 @@ function drawRoutes() {
             for (let i = 1; i < segments.length; i++) {
                 ctx.lineTo(segments[i].x, segments[i].y);
             }
-            ctx.strokeStyle = route.color;
+            ctx.strokeStyle = saveMode ? '#000000' : route.color; // Nero per il salvataggio, colore originale per la visualizzazione normale
             ctx.lineWidth = 4;
             ctx.lineCap = 'round';
             ctx.stroke();
             ctx.closePath();
 
-            drawArrow(segments[segments.length - 2], segments[segments.length - 1], route.color);
+            drawArrow(segments[segments.length - 2], segments[segments.length - 1], saveMode ? '#000000' : route.color); // Nero per il salvataggio, colore originale per la visualizzazione normale
         }
     });
 }
 
 function drawArrow(start, end, color) {
-    const headLength = 20;
+    const headLength = 10;
     const dx = end.x - start.x;
     const dy = end.y - start.y;
     const angle = Math.atan2(dy, dx);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.moveTo(end.x, end.y);
     ctx.lineTo(end.x - headLength * Math.cos(angle - Math.PI / 6), end.y - headLength * Math.sin(angle - Math.PI / 6));
     ctx.moveTo(end.x, end.y);
     ctx.lineTo(end.x - headLength * Math.cos(angle + Math.PI / 6), end.y - headLength * Math.sin(angle + Math.PI / 6));
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 4;
     ctx.stroke();
-    ctx.closePath();
+}
+
+function getCurrentIndex() {
+    return parseInt(localStorage.getItem('playbookIndex')) || 1;
+}
+
+function updateIndex(index) {
+    localStorage.setItem('playbookIndex', index);
+}
+
+function highlightPlayer(player) {
+    highlightedPlayer = player;
+    draw();
 }
 
 draw();

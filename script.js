@@ -3,6 +3,14 @@ const ctx = canvas.getContext('2d');
 canvas.width = 600;
 canvas.height = 800;
 
+const moveArea = {
+    minX: 10, // Coordina X minima
+    maxX: 590, // Coordina X massima
+    minY: 640, // Coordina Y minima
+    maxY: 790  // Coordina Y massima
+};
+
+
 let players = [
     { x: 125, y: 640, initialX: 125, initialY: 640, color: '#FF8000', id: 1 }, // Estrema sinistra
     { x: 220, y: 640, initialX: 220, initialY: 640, color: '#AD1EAD', id: 2 }, // Frazione sinistra
@@ -21,7 +29,7 @@ let shiftPressed = false;
 let highlightedPlayer = null;
 
 function isMouseOverPlayer(player, mouseX, mouseY) {
-    return Math.hypot(player.x - mouseX, player.y - mouseY) < 10;
+    return Math.hypot(player.x - mouseX, player.y - mouseY) < 15;
 }
 
 canvas.addEventListener('mousedown', (e) => {
@@ -34,21 +42,13 @@ canvas.addEventListener('mousedown', (e) => {
             highlightPlayer(draggedPlayer);
         }
     } else {
-        if (geometricMode) {
-            if (highlightedPlayer) {
-                isDrawing = true;
-                if (!currentRoute || currentRoute.playerId !== highlightedPlayer.id) {
-                    currentRoute = { playerId: highlightedPlayer.id, color: highlightedPlayer.color, segments: [] };
-                    routes.push(currentRoute);
-                }
-                currentRoute.segments.push({ x: mouseX, y: mouseY });
-            }
-        } else {
-            if (highlightedPlayer) {
-                isDrawing = true;
-                currentRoute = { playerId: highlightedPlayer.id, color: highlightedPlayer.color, segments: [{ x: mouseX, y: mouseY }] };
+        if (highlightedPlayer) {
+            isDrawing = true;
+            if (!currentRoute || currentRoute.playerId !== highlightedPlayer.id) {
+                currentRoute = { playerId: highlightedPlayer.id, color: highlightedPlayer.color, segments: [{ x: highlightedPlayer.x, y: highlightedPlayer.y }] };
                 routes.push(currentRoute);
             }
+            currentRoute.segments.push({ x: mouseX, y: mouseY });
         }
     }
     draw();
@@ -59,34 +59,51 @@ canvas.addEventListener('mousemove', (e) => {
     mouseY = e.offsetY;
 
     if (draggedPlayer && shiftPressed) {
-        draggedPlayer.x = mouseX;
-        draggedPlayer.y = mouseY;
-        draw();
+        const dx = mouseX - draggedPlayer.x;
+        const dy = mouseY - draggedPlayer.y;
+
+        const newX = draggedPlayer.x + dx;
+        const newY = draggedPlayer.y + dy;
+
+        
+        if (newX >= moveArea.minX && newX <= moveArea.maxX && newY >= moveArea.minY && newY <= moveArea.maxY) {
+            draggedPlayer.x = newX;
+            draggedPlayer.y = newY;
+
+            routes.forEach(route => {
+                if (route.playerId === draggedPlayer.id) {
+                    route.segments.forEach(segment => {
+                        segment.x += dx;
+                        segment.y += dy;
+                    });
+                }
+            });
+            draw();
+        }
     }
 
-    if (isDrawing && !shiftPressed && geometricMode && highlightedPlayer) {
+    if (isDrawing && !shiftPressed && highlightedPlayer) {
         const segments = currentRoute.segments;
-        const lastSegment = segments[segments.length - 1];
-        const dx = mouseX - lastSegment.x;
-        const dy = mouseY - lastSegment.y;
-        const length = Math.sqrt(dx * dx + dy * dy);
-        const angle = Math.atan2(dy, dx);
-        const newX = lastSegment.x + Math.cos(angle) * length;
-        const newY = lastSegment.y + Math.sin(angle) * length;
-        if (segments.length < 2) {
-            segments.push({ x: newX, y: newY });
+        if (geometricMode) {
+            const lastSegment = segments[segments.length - 1];
+            const dx = mouseX - lastSegment.x;
+            const dy = mouseY - lastSegment.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+            const newX = lastSegment.x + Math.cos(angle) * length;
+            const newY = lastSegment.y + Math.sin(angle) * length;
+            if (segments.length < 2) {
+                segments.push({ x: newX, y: newY });
+            } else {
+                segments[segments.length - 1] = { x: newX, y: newY };
+            }
         } else {
-            segments[segments.length - 1] = { x: newX, y: newY };
+            segments.push({ x: mouseX, y: mouseY });
         }
         draw();
     }
-
-    if (isDrawing && !shiftPressed && !geometricMode && highlightedPlayer) {
-        const segments = currentRoute.segments;
-        segments.push({ x: mouseX, y: mouseY });
-        draw();
-    }
 });
+
 
 canvas.addEventListener('mouseup', () => {
     draggedPlayer = null;
@@ -182,7 +199,7 @@ function drawField(saveMode = false) {
 function drawPlayers(saveMode = false) {
     players.forEach(player => {
         ctx.beginPath();
-        ctx.arc(player.x, player.y, 10, 0, Math.PI * 2, true);
+        ctx.arc(player.x, player.y, 15, 0, Math.PI * 2, true);
         ctx.fillStyle = saveMode ? '#000000' : player.color; // Nero per il salvataggio, colore originale per la visualizzazione normale
         ctx.fill();
         if (player === highlightedPlayer) {
@@ -254,16 +271,18 @@ document.getElementById('clear-canvas').addEventListener('click', () => {
         { x: 300, y: 725, color: '#B50000', id: 5 }
     ];
     routes = [];
-    currentPlayer = null;
+    highlightedPlayer = null;
     draw();
 });
 
 document.getElementById('delete-route').addEventListener('click', () => {
     if (highlightedPlayer) {
         routes = routes.filter(route => route.playerId !== highlightedPlayer.id);
-        highlightedPlayer = null;
+        currentRoute = null;
         draw();
     }
 });
+
+
 
 draw();
